@@ -52,6 +52,12 @@ kormaps 패키지에는 areacode, kormap1, kormap2, kormap3, korpop1, korpop2, k
 ```{r, comment=NA}
 rm(list = ls())
 areacode
+areacode$name <- iconv(as.character(areacode$name),  
+                       from = "UTF-8",
+                       to = "CP949")
+areacode$name1 <- iconv(as.character(areacode$name1),  
+                       from = "UTF-8",
+                       to = "CP949")
 areacode2 <- lapply(areacode, function(x) factor(x, levels = x))
 areacode2 <- areacode2 %>%
         as_tibble()
@@ -80,9 +86,9 @@ str(kormap1)
 #         iconv(from = "CP949", to = "UTF-8") %>% #> `CP949`로 인코딩되어 있는 것을 `UTF-8`으로
 #         factor(levels = areacode2$name) #> 앞에서 수정한 `areacode2` 활용. `areacode`는 어떻게?
 #> 위의 piping 을 한줄로 처리하면
-kormap1$SIDO_NM <- factor(iconv(as.character(kormap1$SIDO_NM), 
-                                from = "CP949", 
-                                to = "UTF-8"), 
+kormap1$name <- factor(iconv(as.character(kormap1$name), 
+                                from = "UTF-8", 
+                                to = "CP949"), 
                           levels = areacode2$name)
 str(kormap1)
 ```
@@ -152,9 +158,11 @@ str(kormap2)
 
 ```{r}
 kormap2_2 <- kormap2
-kormap2_2$sigungu_nm2 <- kormap2_2$sigungu_nm %>%
+kormap2_2$name <- kormap2_2$name %>%
         as.character() %>%
-        iconv(from = "CP949", to = "UTF-8")
+        iconv(from = "UTF-8", to = "CP949")
+kormap2_2$sigungu_nm2 <- kormap2_2$sigungu_nm %>%
+        as.character() 
 str(kormap2_2)
 ```
 
@@ -295,7 +303,7 @@ data_emd$code <- data_emd$C행정구역별_읍면동
 ```{r}
 library(ggplot2)
 library(extrafont)
-theme_set(theme_gray(base_family = "HCR Dotum LVT"))
+theme_set(theme_gray(base_family = ""))
 
 ggplot(data = data_sido, 
        aes(map_id = code, 
