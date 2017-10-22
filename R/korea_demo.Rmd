@@ -1,5 +1,5 @@
 ---
-title: "Korea_demo"
+title: "Korea Census Data"
 author: "coop711"
 date: '2017 9 29 '
 output: html_document
@@ -243,43 +243,69 @@ data_inje %>%
 
 ## 시도 인구 단계구분도 그리기
 
-### `map_df`와 `data_sido`의 코드 불일치 문제 해결
+### 옛 `map_df`와 `data_sido`의 코드 불일치 문제 해결
+
+gis developer 에서 다운로드 받은 shape 파일의 지역 코드가 다른 점을 해결하는 코드.
+`map_df`의 `code` 항목으로 남아 있고, shape 파일의 `code`와 `data` 파일의 `code`를 일치시키지 않으면 `code`가 맞지 않는 곳들은 지도에 나타나지 않게 되므로 반드시 맞춰 주어야 함. = 통계청 shape 파일을 사용하면서부터는 필요없게 됨. 
 
 ```{r}
-load("./korea_map.RData")
-map1_df$code <- map1_df$SIDO_CD
-str(map1_df$code)
+map1_df <- readRDS("./map_df.RDS")
+str(map1_df)
 table(map1_df$code)
 str(data_sido$code)
 table(data_sido$code)
-data_sido$code <- factor(data_sido$C행정구역별_읍면동)
-levels(data_sido$code)
-str(data_sido$code)
-map1_df$code_bak <- map1_df$code
-map1_df$code <- factor(map1_df$code, labels = levels(data_sido$code))
+# data_sido$code <- factor(data_sido$C행정구역별_읍면동)
+# levels(data_sido$code)
+# str(data_sido$code)
+# map1_df$code_bak <- map1_df$code
+# map1_df$code <- factor(map1_df$code, labels = levels(data_sido$code))
 map1_df$region <- map1_df$code
-str(map1_df$code)
+# str(map1_df$code)
 table(map1_df$code)
 str(map1_df)
 ```
 
+### `ggplot` 첫번 째 방법
+
 ```{r, choroplethmap}
 library(viridis)
 library(RColorBrewer)
+load("./korea_map.RData")
 fill.pal <- colorRampPalette(brewer.pal(9, "YlGnBu"))(17)
 ggplot(data = data_sido, 
        mapping = aes(map_id = code, 
                      fill = 총인구_명)) + 
-  geom_map(map = map1_df) +
-  expand_limits(x = map1_df$long, 
-                y = map1_df$lat) +
-  theme(plot.title = element_text(family = "HCR Dotum LVT"),
-        legend.title = element_text(family = "HCR Dotum LVT")) +
-  ggtitle("시도 인구 단계구분도") + 
-#  scale_fill_gradientn(name = "인구(명)", colours = c("white", "orange", "red")) +
-  scale_fill_viridis(name = "인구(명)", begin = 0.5, option = "C", direction = -1) +
+        geom_map(map = map1_df) +
+        expand_limits(x = map1_df$long,
+                      y = map1_df$lat) +
+        theme(plot.title = element_text(family = ""),
+        legend.title = element_text(family = "")) +
+        ggtitle("시도 인구 단계구분도") + 
+#  scale_fill_gradientn(name = "인구(명)", colours = c("white", "orange", "red")) 
+        scale_fill_viridis(name = "인구(명)", begin = 0.5, option = "C", direction = -1) +
 #  scale_fill_distiller(name = "인구(명)", palette = "OrRd", trans = "reverse") +
-  coord_map()
+#  coord_quickmap()
+        coord_map()
+```
+
+### `ggplot` 두번째 방법
+
+```{r, choroplethmap2, eval = TRUE}
+library(dplyr)
+shp1_84@data <- data.frame(shp1_84@data, data_sido[match(shp1_84$region, data_sido$code), ])
+map1_data_df <- left_join(shp1_84_df, shp1_84@data, by = c("id" = "id"))
+ggplot(data = map1_data_df, 
+       mapping = aes(x = long,
+                     y = lat,
+                     group = group, 
+                     fill = 총인구_명)) + 
+        geom_polygon(colour = "black", size = 0.1) +
+        theme(plot.title = element_text(family = ""),
+              legend.title = element_text(family = "")) +
+        ggtitle("시도 인구 단계구분도") + 
+#  scale_fill_gradientn(name = "인구(명)", colours = c("white", "orange", "red")) +
+        scale_fill_distiller(name = "인구(명)", palette = "OrRd", direction = 1) +
+        coord_map()
 ```
 
 ## Save
