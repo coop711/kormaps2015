@@ -13,7 +13,7 @@ knitr::opts_chunk$set(echo = TRUE)
 
 [통계지리정보서비스](http://sgis.kostat.go.kr) 에서 신청하고 다운로드 승인난 shape 파일을 [mapshaper](https://mapshaper.org) 에서 간략히 한 후 작업에 착수한다. 승인 후 다운로드 기간이 1주일에 불과하므로 승인 즉시 받아놓는 것을 잊지 않도록. 
 
-`mapshaper` 작업과정에서 유의할 점은 `.zip` 채로 옮겨야 `.prj` 등의 정보를 그대로 활용할 수 있다는 것이다. 그렇지 않고 `.shp`파일만 끌어다 놓고 작업하면 추후에 `.prj` 파일을 원본 shape 파일에서 복사해서 사용해야 한다.
+`mapshaper` 작업과정에서 유의할 점은 `.zip` 채로 옮겨야 `.prj` 등의 정보를 그대로 활용할 수 있다는 것이다. 그러지 않고 `.shp`파일만 끌어다 놓고 작업하면 추후에 `.prj` 파일을 원본 shape 파일에서 복사해서 사용해야 한다.
 
 ## Simplified Versions (from [mapshaper](https://mapshaper.org))
 
