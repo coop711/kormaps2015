@@ -1,0 +1,350 @@
+---
+title: "한국행정지도(2014) 패키지 kormaps2014 데이터 수정"
+author: "Keon-Woong Moon"
+date: "October 27, 2016"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+
+```
+웹R의 운영자 문건웅입니다. 2014년 한국행정지도를 이용하여 단계구분도를 쉽게 만들 수 있게 해 주는 kormaps2014 패키지를 소개합니다. Shape데이타를 데이타프레임으로 미리 변환하였으므로 ggplot2등을 이용하여 쉽게 단계구분도를 그릴 수 있습니다.
+제가 만든 다른 피키지 moonBook2에 있는  ggChoropleth()함수를 이용하면 보다 쉽게 단계구분도를 그릴 수 있습니다. static image뿐만 아니라 tooltip 사용  및 축소 확대 가능한 interactive plot도 쉽게 그릴 수 있습니다.
+```
+
+# 패키지 설치
+
+kormaps패키지는 github에 있습니다. CRAN에 올릴 수는 있으나 한글을 모두 unicode로 변환해야 해서 사용하기 번거로와 github에 올렸습니다. github에 있는 패키지를 설치하려면 devtools 패키지에 있는 install_github()함수를 사용합니다. 
+
+```{r, eval = FALSE}
+# install.packages("devtools")
+devtools::install_github("cardiomoon/kormaps2014")
+```
+
+moonBook2패키지를 설치하시려면 다음과 같이 합니다. 처음 설치하는 경우 많은 패키지를 설치하므로 시간이 조금 걸립니다.
+
+```{r,eval = FALSE}
+devtools::install_github("cardiomoon/moonBook2")
+```
+
+
+# 패키지의 내용
+
+
+패키지를 사용하려면 다음과 같이 패키지를 불러옵니다.
+
+```{r}
+library(kormaps2014)
+library(moonBook2)
+library(tidyverse)
+library(GISTools)
+```
+
+kormaps 패키지에는 areacode, kormap1, kormap2, kormap3, korpop1, korpop2, korpop3, tbc데이타가 포함되어 있습니다.
+
+### 데이타 areacode
+
+`areacode` 의 `code`는 `factor` 이어야 합니다. 그리고 `name`과 `name1`도 마찬가지입니다. 이를 한번에 수행하기 위해서 사용자 함수를 정의합니다. `levels = `를 설정하지 않으면 한글 가나다 순으로 `1, 2, 3, ...`의 `level`이 부여됩니다. `ggplot()` 등으로 그래프를 그리면 `강원도, 경기도, ...`순으로 나오게 되는 이유입니다.
+
+```{r, comment=NA}
+rm(list = ls())
+areacode
+areacode2 <- lapply(areacode, function(x) factor(x, levels = x))
+areacode2 <- areacode2 %>%
+        as_tibble()
+str(areacode2)
+areacode2
+```
+
+###  한국행정지도 데이타
+
+1. kormap1 : 2014년 한국행정지도(시도별)
+2. kormap2 : 2014년 한국행정지도(시군구별)
+3. kormap3 : 2014년 한국행정지도(읍면동별)
+
+`str()`을 적용한 결과물을 보면 `SIDO_NM`, `name1`에 인코딩 문제로 인한 이상한 글자가 보인다. 또한 `SP_ID`의 순서가 "0", "1", "10", "11" 로 되어 있어서 수정이 필요하다. 우선 시도 데이터를 살펴보자. `%>%` 는 작업의 흐름을 잘 보여주는 piping 이다.
+
+### 시도 지도 데이터
+
+#### `SIDO_NM`
+
+시도의 이름에 해당 하는 이 변수는 `name`에서 반복되는 데 `name`에서는 가나다 순에 따라 `강원도, 경기도, ...` 순으로 `factor level`이 자동 설정되어 있다.  좌표 변환 과정에서 위도가 잘못 계산되었음이 명확하다. 이 부분은 원시 shape 파일이 있어야 손볼 수 있다.
+
+```{r}
+str(kormap1)
+# kormap1$SIDO_NM <- kormap1$SIDO_NM %>%
+#         as.character() %>% #> `factor`를 먼저 `character`롤 변환. `factor`는 사실상 1, 2, 3, ...
+#         iconv(from = "CP949", to = "UTF-8") %>% #> `CP949`로 인코딩되어 있는 것을 `UTF-8`으로
+#         factor(levels = areacode2$name) #> 앞에서 수정한 `areacode2` 활용. `areacode`는 어떻게?
+#> 위의 piping 을 한줄로 처리하면
+kormap1$SIDO_NM <- factor(iconv(as.character(kormap1$SIDO_NM), 
+                                from = "CP949", 
+                                to = "UTF-8"), 
+                          levels = areacode2$name)
+str(kormap1)
+```
+
+#### `name1` 
+
+`서율, 부산, ... ` 등 두 글자 약칭이 등장해야 하는데 뭔가 오류가 났었던 듯,
+
+```{r}
+str(kormap1)
+# kormap1$name1 <- kormap1$name1 %>%
+#         as.character() %>% 
+#> `factor`를 먼저 `character`롤 변환. `factor`는 사실상 1, 2, 3, ...
+#         iconv(from = "CP949", to = "UTF-8") %>% 
+#> `CP949`로 인코딩되어 있는 것을 `UTF-8`으로
+#         factor(levels = areacode2$name,
+#                labels = areacode2$name1) 
+#> 앞에서 수정한 `areacode2` 활용. `labels = ` 없이 `levels = areacode2$name1` 하면 어떻게 될까? 
+#> 위의 piping 을 한줄로 처리하면
+kormap1$name1 <- factor(iconv(as.character(kormap1$name1), 
+                              from = "CP949", 
+                              to = "UTF-8"), 
+                        levels = areacode2$name,
+                        labels = areacode2$name1)
+str(kormap1)
+```
+
+#### `name` 수정
+
+`factor level` 조정, '서울특별시, 부산광역시, ... `순으로 나오게 됨.
+
+```{r}
+kormap1$name <- kormap1$name %>%
+        as.character %>%
+        factor(levels = areacode2$name)
+str(kormap1)
+```
+
+#### `SP_ID` 수정
+
+`factor level` 조정, '서울특별시, 부산광역시, ... `순으로 나오게 됨.
+
+```{r}
+kormap1$SP_ID <- kormap1$SP_ID %>%
+        as.character %>%
+        factor(levels = 0:(length(areacode2$name) - 1))
+str(kormap1)
+saveRDS(kormap1, file = "./kormap1.RDS")
+```
+
+### 시군구 행정지도 데이터 수정 
+
+이름이 같은 시군구를 구분하여 `factor`로 정리하는 것이 관건임.
+
+#### 데이터 구조
+
+행정지역 코드를 나타내는 `sigungu_cd`와 행정지역 이름을 나타내는 `sigungu_nm`의 갯수가 다른 점에 유의. 예를 들어서 `고성군`은 강원도에도 있고, 경상남도에도 있는 데 구분하지 못하고 있음.
+`stringsAsFactors = FALSE` 를 설정하지 않았기 때문에 `factor`로 변환하는 과정에서 가나다 순으로 수준이 정해졌기 때문임.
+
+```{r}
+str(kormap2)
+```
+
+#### 한글 인코딩 문제
+
+복제본을 만들어 작업.
+
+```{r}
+kormap2_2 <- kormap2
+kormap2_2$sigungu_nm2 <- kormap2_2$sigungu_nm %>%
+        as.character() %>%
+        iconv(from = "CP949", to = "UTF-8")
+str(kormap2_2)
+```
+
+#### 행정지역코드 순서 확인 
+
+지명 가나다 순에 따라 행정지역코드도 흩으러져 있음을 확인하고 정리.
+
+```{r}
+levels(kormap2_2$sigungu_cd)
+unique(kormap2_2$sigungu_cd)
+o <- order(kormap2_2$sigungu_cd)
+kormap2_2 <- kormap2_2[o, ]
+# kormap2[o, c("sigungu_cd", "sigungu_nm2")] 
+```
+
+#### 중복등장 지역명을 시도명 붙여 구분
+
+```{r}
+#> 코드별로 그룹을 나누고 각 그룹의 맨 첫 레코드만 걸러냄.
+#> `ggplot2`를 load하면서 `MASS` 패키지를 함께 불러오다 보니 충돌이 생기게 된다. 
+#> "Error in select() : unused argument"가 뜨면,  `dplyr::select`로 명시하거나 `select <- dplyr::select`로 선언하고 `select()`를 실행하면 된다.
+select <- dplyr::select
+cd_nm <- kormap2_2 %>%
+#        as_tibble() %>%
+        group_by(sigungu_cd) %>%
+#        filter(row_number() == 1) %>%
+        slice(1) %>%
+#        .[, c("sigungu_cd", "sigungu_nm2")]
+        select(c("sigungu_cd", "sigungu_nm2")) 
+#        sample_n(size = 1) 
+print(cd_nm, n = Inf)
+#> 중복등장하는 지역명 위치 확인. `.`의 활용방법에 유의.
+dup_nm_idx <- cd_nm %>%
+#         select("sigungu_nm2") %>% 
+        .[, "sigungu_nm2"] %>%
+        duplicated() %>%
+        which()
+dup_nm_idx
+#> 중복등장하는 행정지역명 추출. 벡터로 추출하기 위하여 `[[1]]` 사용.
+dup_nm <- cd_nm %>% 
+        .[dup_nm_idx, "sigungu_nm2"] %>%
+        .[[1]] %>%
+        unique()
+str(dup_nm)
+#> 중복된 행정지역코드와 이름 출력
+cd_nm$sigungu_nm2 %in% dup_nm
+dup_cd_nm <- cd_nm %>% 
+       .[cd_nm$sigungu_nm2 %in% dup_nm, ] 
+print(dup_cd_nm, n = Inf)
+#         filter(sigungu_nm2 %in% 
+#                       c("강서구", "고성군", "남구", "동구", "북구", "서구", "중구")) %>%
+#         select(c("sigungu_cd", "sigungu_nm2")) %>%
+#         arrange(sigungu_cd)
+#        arrange(sigungu_nm2) 
+# print(dup_nm[duplicated(dup_nm[, "sigungu_nm2"]), ], n = Inf)
+# unique(dup_nm[, "sigungu_cd"])
+# code_kormap2 <- sort(unique(kormap2$sigungu_cd))
+# table(kormap2$sigungu_nm2)
+#> 중복등장 지역코드로부터 소재 시도를 파악하여 새로운 변수로 설정. `substr()`과 `match()`의 용법 유의
+dup_cd_nm$sido <- areacode2$name1[match(substr(dup_cd_nm$sigungu_cd, 1 , 2), 
+                                        areacode$code)]
+print(dup_cd_nm, n = Inf)
+#> 시도명을 중복등장 행정지역명에 추가하여 새로운 행정지역명 생성
+dup_cd_nm$sigungu_nm3 <- paste(as.character(dup_cd_nm$sido), 
+                               dup_cd_nm$sigungu_nm2, 
+                               sep = "_")
+print(dup_cd_nm, n = Inf)
+#> 행정지역코드와 새로운 지역명을 갖는 목록 작성
+cd_nm$sigungu_nm4 <- cd_nm$sigungu_nm2
+for(x in dup_cd_nm$sigungu_cd)
+cd_nm$sigungu_nm4[cd_nm$sigungu_cd == x] <- 
+        dup_cd_nm$sigungu_nm3[dup_cd_nm$sigungu_cd == x]
+print(cd_nm, n = Inf)
+```
+
+#### 새로운 지역명 변수 추가
+
+```{r}
+kormap2_2$sigungu_nm4 <- kormap2_2$sigungu_nm2
+for(x in dup_cd_nm$sigungu_cd)
+kormap2_2$sigungu_nm4[kormap2_2$sigungu_cd == x] <- 
+        dup_cd_nm$sigungu_nm3[dup_cd_nm$sigungu_cd == x]
+# kormap2[o, c("sigungu_cd", "sigungu_nm2", "sigungu_nm4")]
+str(kormap2_2)
+```
+
+#### 시군구 이름 `factor`로 변환
+
+`sigungu_cd`에 부합하는  순서로 정리
+
+```{r}
+kormap2_2$sigungu_nm4 <- factor(kormap2_2$sigungu_nm4,
+                                levels = cd_nm$sigungu_nm4)
+str(kormap2_2)
+```
+
+#### `SP_ID` 수정
+
+`factor level` 조정, '서울특별시, 부산광역시, ... `순으로 나오게 됨.
+
+```{r}
+kormap2_2$SP_ID <- kormap2_2$SP_ID %>%
+        as.character %>%
+        factor(levels = 0:(length(cd_nm$sigungu_nm4) - 1))
+str(kormap2_2)
+saveRDS(kormap2_2, file = "./kormap2_2.RDS")
+```
+
+## 읍면동 데이터
+
+<!--
+#> 추후 작업
+-->
+
+### 지역별 인구총조사데이타(2015)
+
+1. `data_sido` : 2015년 센서스데이터(시도별)
+2. `data_sgg` : 2015년 센서스데이터(시군구별)
+3. `data_emd` :  2015년 센서스데이터(읍면동)
+
+```{r, comment = NA}
+data_sido <- readRDS("./data_sido.RDS")
+data_sgg <- readRDS("./data_sgg.RDS")
+data_emd <- readRDS("./data_emd.RDS")
+str(data_sido)
+str(data_sgg)
+data_sgg$code <- data_sgg$C행정구역별_읍면동
+str(data_emd)
+data_emd$code <- data_emd$C행정구역별_읍면동
+```
+
+# 단계구분도 그리기
+
+## ggplot2를 이용한 단계구분도 그리기
+
+다음으로는 ggplot2를 이용한 단계구분도를 그려보겠습니다. 2015년 인구총조사 중 "총인구_명"으로 단계구분도를 그리려면 다음과 같이 합니다.
+
+```{r}
+library(ggplot2)
+library(extrafont)
+theme_set(theme_gray(base_family = "HCR Dotum LVT"))
+
+ggplot(data = data_sido, 
+       aes(map_id = code, 
+           fill = 총인구_명)) +
+        geom_map(map = kormap1,
+                 colour = "black", 
+                 size = 0.1) +
+        expand_limits(x = kormap1$long,
+                      y = kormap1$lat) +
+        scale_fill_gradientn(colours = c('white','orange','red')) +
+        ggtitle("2015년도 시도별 인구분포도") +
+        coord_map()
+```
+
+
+### ggChoropleth()함수를 이용한 단계구분도 그리기 
+
+moonBook2패키지에 있는 ggChoropleth()함수를 이용하면 훨씬 간편하게 단계구분도를 그릴 수 있습니다. 다음은 시군구별, 읍면동별 단계구분도의 예제입니다. 
+
+```{r, eval = TRUE}
+library(ggiraph)
+ggChoropleth(data_sgg, kormap2_2, fillvar = "총인구_명")
+# ggChoropleth(korpop2, kormap2,fillvar="총인구_명")
+# ggChoropleth(korpop3,kormap3,fillvar="주택_계_호")
+```
+
+ggChoropleth()함수의 subarea인수를 이용하면 지도의 일부를 쉽게 그릴 수 있습니다. 예를 들어 호남지방의 단계구분도만 그리려면 다음과같이 할수 있습니다. 
+```{r}
+ggChoropleth(korpop3,kormap3,fillvar="총인구_명",subarea=c("전라","광주"))
+```
+
+### ggChoropleth()함수를 이용한 Interactive Plot 그리기 
+
+```{r, eval = TRUE}
+ggChoropleth(data_sgg, 
+             kormap2_2, 
+             fillvar = "총인구_명", 
+             interactive = TRUE, 
+             tooltip = "행정구역별_읍면동")
+```
+
+### `subarea`
+
+```{r, eval = TRUE}
+ggChoropleth(data_emd, 
+             kormap3, 
+             fillvar = "총인구_명", 
+             interactive = TRUE, 
+             subarea = c("서울", "종로구"),
+             tooltip = "행정구역별_읍면동")
+```
+
