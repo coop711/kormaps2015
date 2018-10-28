@@ -1,7 +1,7 @@
 ---
 title: "Korea Map WGS84"
 author: "coop711"
-date: '2017 9 20 '
+date: "`r Sys.Date()`"
 output: html_document
 ---
 
@@ -43,19 +43,29 @@ shp1 <- readOGR(dsn = "../data/BND_SIDO_PG",
 shp1@data #> data file 이 빈약한 것 확인.
 data.frame(shp1)
 class(shp1)
-shp1$SIDO_NM2 <- c("서울", "부산", "대구", "인천", "광주", "대전", "율산", "세종", "충북", "충남", "전북", "전남", "경북", "경남", "제주", "경기", "강원") 
+shp1$SIDO_NM2 <- c("서울", "부산", "대구", "인천", "광주", "대전", "울산", "세종", "충북", "충남", "전북", "전남", "경북", "경남", "제주", "경기", "강원") 
 summary(shp1) #> 요약
 shp1@data
 coordinates(shp1)
 ```
 
+<P style = "page-break-before:always"> 
+
 #### Simple Plots
 
-```{r, fig.width =7, fig.height = 7}
+```{r, fig.width = 7, fig.height = 7}
 opar <- par() #> 기본 설정을 저장한다.
 par("mar") #> 플롯 마진의 기본 설정 확인
 par(mar = c(0, 0, 0, 0)) #> 여백의 빈 공간을 줄이기 위하여 설정. 없을 때와 비교
 plot(shp1) #
+```
+
+<P style = "page-break-before:always"> 
+
+#### Choropleth Map
+
+```{r, fig.width = 7, fig.height = 7}
+par(mar = c(0, 0, 0, 0)) #> 여백의 빈 공간을 줄이기 위하여 설정. 없을 때와 비교
 AREA.shades <- auto.shading(shp1$SHAPE_AREA, cols = brewer.pal(5, "Greens"))
 choropleth(shp1, shp1$SHAPE_AREA, shading = AREA.shades)
 choro.legend(1110000, 1600000, AREA.shades)
@@ -94,16 +104,22 @@ shp1_84$SIDO_NM_f <- factor(shp1_84$SIDO_NM,
                                 levels = shp1_84$SIDO_NM, 
                                 labels = shp1_84$SIDO_NM2)
 shp1_84$region <- shp1_84$SIDO_CD
-shp1_84_df <- tidy(shp1_84)
+# shp1_84_df <- tidy(shp1_84)
+shp1_84_df <- fortify(shp1_84)
 str(shp1_84_df)
 str(shp1_84@data)
 map1_df <- left_join(shp1_84_df, 
                      shp1_84@data, 
                      by = c("id" = "id"))
 str(map1_df)
-Dokdo_coord <- geocode("Dokdo")
-Ulleung_coord <- geocode("Ulleungdo")
+load("./coords.RData")
+ls(patt = "*_coord$")
+# Dokdo_coord <- geocode("Dokdo") Google Maps 는 요금계산토록 변경됨.
+# Dokdo_coord <- geocode("Dokdo", source = "dsk") #> (Data Science Toolkit 활용)
+# Ulleung_coord <- geocode("울릉도", source = "dsk")
 ```
+
+<P style = "page-break-before:always">
 
 ### 시군구
 
@@ -116,14 +132,18 @@ shp2 <- readOGR(dsn = "../data/BND_SIGUNGU_PG",
                 layer = "BND_SIGUNGU_PG",
                 stringsAsFactors = FALSE)
 #                 encoding = "CP949")
-class(shp2)
 summary(shp2) #> 요약
-shp2@data #> data file에서 면적과 둘레 확인.
+class(shp2)
+#> data file에서 면적과 둘레 확인. 앞뒤 10개 시군씩만 확인. 뒷 부분의 이상한 점에 주의
+head(shp2@data, n = 10)
+tail(shp2@data, n = 10)
 # data.frame(shp2)
 shp2@data[order(shp2$SIGUNGU_CD), ]
 # shp2@data <- shp2@data[order(shp2$SIGUNGU_CD), ]
 # shp2@data
 ```
+
+<P style = "page-break-before:always">
 
 #### Simple Plots
 
@@ -132,6 +152,14 @@ opar <- par() #> 기본 설정을 저장한다.
 par("mar") #> 플롯 마진의 기본 설정 확인
 par(mar = c(0, 0, 0, 0)) #> 여백의 빈 공간을 줄이기 위하여 설정. 없을 때와 비교
 plot(shp2)
+```
+
+<P style = "page-break-before:always">
+
+#### Choropleth Map
+
+```{r, fig.width = 7, fig.height = 7}
+par(mar = c(0, 0, 0, 0))
 AREA2.shades <- auto.shading(shp2$SHAPE_AREA, cols = brewer.pal(5, "Blues"))
 choropleth(shp2, shp2$SHAPE_AREA, shading = AREA2.shades)
 choro.legend(1110000, 1600000, AREA2.shades)
@@ -162,12 +190,15 @@ colnames(map2_coords) <- c("long", "lat") #> 좌표계 이름 명칭.
 head(map2_coords) # 좌표 확인
 map2_data <- cbind(map2_coords, shp2_84@data) # shp_simp84@data 에 좌표 추가
 head(map2_data)
-shp2_84_df <- tidy(shp2_84)
+# shp2_84_df <- tidy(shp2_84)
+shp2_84_df <- fortify(shp2_84)
 str(shp2_84_df)
 str(shp2_84@data)
 map2_df <- left_join(shp2_84_df, shp2_84@data, by = c("id" = "id"))
 str(map2_df)
 ```
+
+<P style = "page-break-before:always">
 
 ### 시군구 면적 삽입
 
@@ -179,12 +210,17 @@ qtm(shp2_84,
   tm_layout(fontfamily = "HCR Dotum LVT")
 ```
 
+
 ```{r}
 qtm(shp2_84, 
     fill = "SHAPE_LENG", 
     fill.title = "둘레") +
   tm_layout(fontfamily = "HCR Dotum LVT")
 ```
+
+### ggplot
+
+#### map2_df
 
 ```{r, fig.width = 12, fig.height = 12, eval = TRUE}
 g0 <- ggplot(data = map2_df,  
@@ -220,6 +256,10 @@ g4 + annotate("text",
            family = "HCR Dotum LVT",
            colour = "black")
 ```
+
+<P style = "page-break-before:always">
+
+#### shp2_84_df
 
 ```{r, fig.width = 12, fig.height = 12, eval = TRUE}
 #> data frame으로 변환하여 그리는 전형적인 과정
@@ -257,6 +297,8 @@ ggplot(data = shp2_84_df,
            colour = "black")
 ```
 
+<P style = "page-break-before:always">
+
 ### 색으로 구분
 
 ```{r, fig.width = 12, fig.height = 12, eval = TRUE}
@@ -277,6 +319,8 @@ ggplot(data = map2_df,
   scale_fill_distiller()
 ```
 
+<P style = "page-break-before:always">
+
 ## `leaflet` 패키지 
 
 ### 시도
@@ -296,6 +340,8 @@ fillOpacity = 0.8,
 popup = popup1,
 color = ~mypalette1(shp1_84$SHAPE_AREA))
 ```
+
+<P style = "page-break-before:always">
 
 ### 시군구
 

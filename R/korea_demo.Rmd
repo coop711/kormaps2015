@@ -85,58 +85,58 @@ census_data %>%
   select(C행정구역별_읍면동:여자_명)
 census_data %>%
   .[1:10, 1:6]
-census_data %>% #> 세종특별자치시의 득수성, 광역으로 분류되면서 시군구에도 동시 분류
-  filter({
-    census_data %>%  #> `{}`의 용법에 유의.
-#   select(C행정구역별_읍면동) %>% #> 작동하지 않음. list 추출
-      .[, 1] %>%  #> 작동함. atomic vector cncnf
-      substr(1, 2) %>% 
-      `==`("29")}) %>%
+#> 세종특별자치시의 특수성, 광역으로 분류되면서 시군구에도 동시 분류
+# census_data %>% 
+#   subset({
+#     census_data %>%  #> `{}`의 용법에 유의.
+##   select(C행정구역별_읍면동) %>% #> 작동하지 않음. list 추출
+#       .[, 1] %>%  #> 작동함. atomic vector 추출
+#       substr(1, 2) %>% 
+#        `==`("29")}) %>%
+#         select(C행정구역별_읍면동:여자_명)
+#> piping 을 최소화하면, filter 대신 subset 을 써도 무방한 듯.
+census_data %>%
+  filter(substr(census_data$C행정구역별_읍면동, 1, 2) == "29") %>%
   select(C행정구역별_읍면동:여자_명)
-#> piping 을 최소화하면,
-# census_data %>%
-#   filter(substr(census_data$C행정구역별_읍면동, 1, 2) == "29") %>%
-#   select(C행정구역별_읍면동:여자_명)
-data_sido <- census_data %>%  #> 시도 코드는 두 자리이고 11(서울)부터 매겨짐. 00은 전체, 03은 동, 04는 읍, 05는 면부의 총계임. 
-#  filter(nchar(C행정구역별_읍면동) == 2 & 
-#           C행정구역별_읍면동 >= 11) 
-  filter({
-    census_data %>%
-        .[, 1] %>%
-        nchar() %>%
-        `==`(2)} & 
-    {census_data %>%
-        .[, 1] %>%
-        `>=`(11)}) 
+#> 시도 코드는 두 자리이고 11(서울)부터 매겨짐. 00은 전체, 03은 동, 04는 읍, 05는 면부의 총계임.
+data_sido <- census_data %>%   
+        filter(nchar(C행정구역별_읍면동) == 2 & C행정구역별_읍면동 >= 11) 
+
 census_data %>%
   names()
 # names(census_data) 
 # data_sido %>%
 #   mutate(code = C행정구역별_읍면동)
 data_sido$code <- data_sido$C행정구역별_읍면동 #> `map_id` 설정
-
+#> 춘천시의 코드 추출 filter 대신 subset 을 쓰면 작동됨.
 code_chuncheon <- census_data %>%
   select(C행정구역별_읍면동) %>%
-  filter({
+  subset({
     census_data %>%
       .[, 2] %>%
       `==`("춘천시")
   }) 
-#  select(C행정구역별_읍면동) #> 앞에서 `select()`하고 `filter()`를 수행하거나 앞에서 `filter()` 를 수행하고 뒤에서 `select()`를 해도 결과는 같음.
+#  select(C행정구역별_읍면동) #> 앞에서 `select()`하고 `filter()`를 수행하거나 앞에서 `filter()` 를 수행하고 뒤에서 `select()`를 해도 결과는 같음. => filter 는 에러 나옴.
 #  .[, 1]  #> 값만 추출하고자 할 때는 이 방법이 적절함
-code_chuncheon
-# census_data$C행정구역별_읍면동[census_data$행정구역별_읍면동 == "춘천시"]
+code_chuncheon <- 
+        census_data$C행정구역별_읍면동[census_data$행정구역별_읍면동 == "춘천시"]
+# code_chuncheon <- census_data %>%
+#         .[, 1] %>%
+#         `[`(`==`(census_data$행정행정구역별_읍면동, "춘천시"))
+##        `[`(census_data$행정행정구역별_읍면동 == "춘천시")
 str(code_chuncheon)
 code_chuncheon == "32010"  
 code_chuncheon <- unname(unlist(code_chuncheon))
 code_chuncheon
-code_inje <- census_data %>%
-  select(C행정구역별_읍면동) %>%
-  filter({
-    census_data %>%
-      .[, 2] %>%
-      `==`("인제군")
-  }) 
+code_inje <- 
+        census_data$C행정구역별_읍면동[census_data$행정구역별_읍면동 == "인제군"]
+# code_inje <- census_data %>%
+#    select(C행정구역별_읍면동) %>%
+#    subset({
+#      census_data %>%
+#        .[, 2] %>%
+#        `==`("인제군")
+#    }) 
 code_inje <- unname(unlist(code_inje))
 code_inje
 data_sido %>%
@@ -151,45 +151,48 @@ data_sido %>%
 ## 시군구 데이터
 
 ```{r, sigungu}
-data_sigungu <- census_data %>% #> 5자리 코드를 시군구로 걸러냄.
-#   filter(nchar(C행정구역별_읍면동) == 5)
-  filter(
-    {census_data %>%
+#> 5자리 코드를 시군구로 걸러냄.
+data_sigungu <- census_data %>% 
+#         filter(nchar(C행정구역별_읍면동) == 5)
+  subset(
+     {census_data %>%
         .[, 1] %>%
         nchar() %>%
         `==`(5)})
-
+#> 첫 여섯 변수 
 data_sigungu %>%
   .[, 1:6]
+#> 데이터 레코드 갯수
 data_sigungu %>%
   nrow()
 # nrow(data_sigungu)
 data_sigungu %>%
   .[1:10, 1:6]
-data_sigungu %>% #> 시군구로 분류되어 있는 세종시 통계에 읍부, 면부, 동부 통계 포함
-#   filter(substr(data_sigungu$C행정구역별_읍면동, 1, 2) == "29") %>%
-#   .[ , 1:6] 
-  filter({
-    data_sigungu %>%
+#> 시군구로 분류되어 있는 세종시 통계에 읍부, 면부, 동부 통계 포함
+data_sigungu %>% 
+#        filter(substr(data_sigungu$C행정구역별_읍면동, 1, 2) == "29") %>%
+#        .[ , 1:6] 
+  subset({
+     data_sigungu %>%
       .[, 1] %>%
       substr(1, 2) %>%
       `==`("29")}) %>%
   .[, 1:6]
-# substr(data_sigungu[, 1], 3, 5) %in% c("003", "004", "005")
+substr(data_sigungu[, 1], 3, 5) %in% c("003", "004", "005")
 data_sigungu %>%
   .[, 1] %>%
   substr(3, 5) %>%
   `%in%`(c("003", "004", "005")) %>%
   `!`
 data_sgg <- data_sigungu %>%
-  filter({
-    data_sigungu %>%
-      .[, 1] %>%
-      substr(3, 5) %>%
-      `%in%`(c("003", "004", "005")) %>%
-      `!` 
-    })
-#  filter(!(substr(data_sigungu[, 1], 3, 5) %in% c("003", "004", "005")))
+        filter(!(substr(data_sigungu[, 1], 3, 5) %in% c("003", "004", "005")))
+#   filter({
+#     data_sigungu %>%
+#       .[, 1] %>%
+#       substr(3, 5) %>%
+#       `%in%`(c("003", "004", "005")) %>%
+#       `!` 
+#     })
 data_sgg %>%
   nrow()
 # nrow(data_sgg)
@@ -206,32 +209,34 @@ data_sgg %>%
 ### 읍면동 데이터
 
 ```{r, emd}
-data_emd <- census_data %>% #> 7자리 코드를 읍면동으로 걸러냄
-  filter({
-    census_data %>%
-      .[, 1] %>%
-      nchar() %>%
-      `==`(7)
-  })
-#    filter(nchar(C행정구역별_읍면동) == 7)
+#> 7자리 코드를 읍면동으로 걸러냄
+data_emd <- census_data %>% 
+        filter(nchar(C행정구역별_읍면동) == 7)
+#   filter({
+#     census_data %>%
+#       .[, 1] %>%
+#       nchar() %>%
+#       `==`(7)
+#   })
 data_emd %>%
   .[, 1:6] %>%
   head()
 # head(data_emd[, 1:6])
 data_emd %>%
   nrow()
-
-data_chuncheon <- data_emd %>%
-  filter({
-    data_emd %>%
-      .[, 1] %>%
-      substr(1, 5) %>%
-      `==`(code_chuncheon)    
-  }) 
+data_chuncheon <- 
+        data_emd[substr(data_emd$C행정구역별_읍면동, 1, 5) == code_chuncheon, ]
+# data_chuncheon <- data_emd %>%
+#   subset({
+#     data_emd %>%
+#       .[, 1] %>%
+#       substr(1, 5) %>%
+#       `==`(code_chuncheon)    
+#   }) 
 data_chuncheon %>%
   .[, 1:6]
 data_inje <- data_emd %>%
-  filter({
+  subset({
     data_emd %>%
       .[, 1] %>%
       substr(1, 5) %>%
@@ -246,7 +251,7 @@ data_inje %>%
 ### 옛 `map_df`와 `data_sido`의 코드 불일치 문제 해결
 
 gis developer 에서 다운로드 받은 shape 파일의 지역 코드가 다른 점을 해결하는 코드.
-`map_df`의 `code` 항목으로 남아 있고, shape 파일의 `code`와 `data` 파일의 `code`를 일치시키지 않으면 `code`가 맞지 않는 곳들은 지도에 나타나지 않게 되므로 반드시 맞춰 주어야 함. = 통계청 shape 파일을 사용하면서부터는 필요없게 됨. 
+`map_df`의 `code` 항목으로 남아 있고, shape 파일의 `code`와 `data` 파일의 `code`를 일치시키지 않으면 `code`가 맞지 않는 곳들은 지도에 나타나지 않게 되므로 반드시 맞춰 주어야 함. 이 문제는 통계청 shape 파일을 사용하면서부터는 필요없게 됨. 
 
 ```{r}
 map1_df <- readRDS("./map_df.RDS")
